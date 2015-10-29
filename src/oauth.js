@@ -15,7 +15,7 @@ angular.module("oauth.providers", ["oauth.utils"])
             } else {
                 throw 'Cannot authenticate via a web browser';
             }
-        };
+        }
 
         return {
 
@@ -96,9 +96,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                     });
                             }
                         });
-                    })
+                    });
                 } catch (errorMessage) {
-                    deferred.reject(errorMessage)
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1217,7 +1217,7 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                    })
+                    });
                 } catch (errorMessage) {
                     deferred.reject(errorMessage);
                 }

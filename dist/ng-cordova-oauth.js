@@ -1,6 +1,22 @@
 angular.module("oauth.providers", ["oauth.utils"])
     .factory("$cordovaOauth", ["$q", '$http', "$cordovaOauthUtility", function($q, $http, $cordovaOauthUtility) {
 
+        function initialValidation(deferred, callback) {
+            if (window.cordova) {
+                var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
+                if ($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                    browserRef.addEventListener('exit', function(event) {
+                        deferred.reject("The sign in flow was canceled");
+                    });
+                    callback();
+                } else {
+                    throw 'Could not find InAppBrowser plugin';
+                }
+            } else {
+                throw 'Cannot authenticate via a web browser';
+            }
+        }
+
         return {
 
             /*
@@ -13,10 +29,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             azureAD: function(clientId, tenantId, resourceURL) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
-
+                try {
+                    initialValidation(deferred, function() {
                         var browserRef = window.open('https://login.microsoftonline.com/' + tenantId + '/oauth2/authorize?response_type=code&client_id=' + clientId + '&redirect_uri=http://localhost/callback', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener("loadstart", function(event) {
                             if((event.url).indexOf('http://localhost/callback') === 0) {
@@ -24,9 +38,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 console.log(requestToken);
                                 $http.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
 
-                                $http({method: "post", url: "https://login.microsoftonline.com/" + tenantId + "/oauth2/token", data: 
-                                    "client_id=" + clientId + 
-                                    "&code=" + requestToken + 
+                                $http({method: "post", url: "https://login.microsoftonline.com/" + tenantId + "/oauth2/token", data:
+                                    "client_id=" + clientId +
+                                    "&code=" + requestToken +
                                     "&redirect_uri=http://localhost/callback&" +
                                     "grant_type=authorization_code&" +
                                     "resource=" + resourceURL})
@@ -43,14 +57,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                     });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -65,9 +74,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             adfs: function(clientId, adfsServer, relyingPartyId) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var browserRef = window.open(adfsServer + '/adfs/oauth2/authorize?response_type=code&client_id=' + clientId +'&redirect_uri=http://localhost/callback&resource=' + relyingPartyId, '_blank', 'location=no');
 
                         browserRef.addEventListener("loadstart", function(event) {
@@ -88,14 +96,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                     });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -109,9 +112,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             dropbox: function(appKey, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -121,8 +123,8 @@ angular.module("oauth.providers", ["oauth.utils"])
                         var browserRef = window.open("https://www.dropbox.com/1/oauth2/authorize?client_id=" + appKey + "&redirect_uri=" + redirect_uri + "&response_type=token", "_blank", "location=no,clearsessioncache=yes,clearcache=yes");
                         browserRef.addEventListener("loadstart", function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
-                            	browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
@@ -136,14 +138,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -158,9 +155,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             digitalOcean: function(clientId, clientSecret, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -186,14 +182,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                     });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -208,9 +199,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             google: function(clientId, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -220,8 +210,8 @@ angular.module("oauth.providers", ["oauth.utils"])
                         var browserRef = window.open('https://accounts.google.com/o/oauth2/auth?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&scope=' + appScope.join(" ") + '&approval_prompt=force&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener("loadstart", function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
-                           		browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
@@ -235,14 +225,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -258,9 +243,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             github: function(clientId, clientSecret, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -287,14 +271,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                     });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+
                 }
                 return deferred.promise;
             },
@@ -309,9 +288,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             facebook: function(clientId, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -325,8 +303,8 @@ angular.module("oauth.providers", ["oauth.utils"])
                         var browserRef = window.open(flowUrl, '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
-                            	browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
@@ -343,14 +321,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -367,9 +340,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             linkedin: function(clientId, clientSecret, appScope, state, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -396,14 +368,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                     });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -418,15 +385,12 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             instagram: function(clientId, appScope, options) {
                 var deferred = $q.defer();
-
-                var split_tokens = {
-                    'code':'?',
-                    'token':'#'
-                };
-
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
+                        var split_tokens = {
+                            'code':'?',
+                            'token':'#'
+                        };
                         var redirect_uri = "http://localhost/callback";
                         var response_type = "token";
                         if(options !== undefined) {
@@ -459,14 +423,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -482,9 +441,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             box: function(clientId, clientSecret, appState, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -510,14 +468,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                     });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -533,9 +486,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             reddit: function(clientId, clientSecret, appScope, compact, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -562,14 +514,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                     });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -637,9 +584,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             twitter: function(clientId, clientSecret, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -720,21 +666,17 @@ angular.module("oauth.providers", ["oauth.utils"])
                                                 });
                                         }
                                     });
-                                    browserRef.addEventListener('exit', function(event) {
-                                        deferred.reject("The sign in flow was canceled");
-                                    });
                                 })
                                 .error(function(error) {
                                     deferred.reject(error);
                                 });
                         } else {
+                            // TODO - change to throw an error
                             deferred.reject("Missing jsSHA JavaScript library");
                         }
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -748,9 +690,8 @@ angular.module("oauth.providers", ["oauth.utils"])
             */
             meetup: function(clientId, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -760,8 +701,8 @@ angular.module("oauth.providers", ["oauth.utils"])
                         var browserRef = window.open('https://secure.meetup.com/oauth2/authorize/?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
-                            	browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = {};
@@ -775,14 +716,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -798,19 +734,19 @@ angular.module("oauth.providers", ["oauth.utils"])
              * @return   promise
              */
             salesforce: function (loginUrl, clientId) {
-                var redirectUri = 'http://localhost/callback';
-                var getAuthorizeUrl = function (loginUrl, clientId, redirectUri) {
-                    return loginUrl+'services/oauth2/authorize?display=touch'+
-                        '&response_type=token&client_id='+escape(clientId)+
-                        '&redirect_uri='+escape(redirectUri);
-                };
-                var startWith = function(string, str) {
-                    return (string.substr(0, str.length) === str);
-                };
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
+                        var redirectUri = 'http://localhost/callback';
+                        var getAuthorizeUrl = function (loginUrl, clientId, redirectUri) {
+                            return loginUrl+'services/oauth2/authorize?display=touch'+
+                                '&response_type=token&client_id='+escape(clientId)+
+                                '&redirect_uri='+escape(redirectUri);
+                        };
+                        var startWith = function(string, str) {
+                            return (string.substr(0, str.length) === str);
+                        };
+
                         var browserRef = window.open(getAuthorizeUrl(loginUrl, clientId, redirectUri), "_blank", "location=no,clearsessioncache=yes,clearcache=yes");
                         browserRef.addEventListener("loadstart", function(event) {
                             if(startWith(event.url, redirectUri)) {
@@ -837,14 +773,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }, 10);
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -860,9 +791,8 @@ angular.module("oauth.providers", ["oauth.utils"])
             */
             strava: function(clientId, clientSecret, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -888,14 +818,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -910,9 +835,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             withings: function(clientId, clientSecret) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         if(typeof jsSHA !== "undefined") {
 
                             // Step 1 : get a oAuth "request token"
@@ -982,21 +906,17 @@ angular.module("oauth.providers", ["oauth.utils"])
                                                 });
                                         }
                                     });
-                                    browserRef.addEventListener('exit', function(event) {
-                                        deferred.reject("The sign in flow was canceled");
-                                    });
                                 })
                                 .error(function(error) {
                                     deferred.reject(error);
                                 });
                         } else {
+                            // TODO - change to throw and error
                             deferred.reject("Missing jsSHA JavaScript library");
                         }
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1010,9 +930,8 @@ angular.module("oauth.providers", ["oauth.utils"])
             */
             foursquare: function(clientId, options) {
                 var deferred = $q.defer();
-                if (window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if ($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1022,8 +941,8 @@ angular.module("oauth.providers", ["oauth.utils"])
                         var browserRef = window.open('https://foursquare.com/oauth2/authenticate?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener('loadstart', function (event) {
                             if ((event.url).indexOf(redirect_uri) === 0) {
-                            	browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
@@ -1041,14 +960,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1064,9 +978,8 @@ angular.module("oauth.providers", ["oauth.utils"])
             */
             magento: function(baseUrl, clientId, clientSecret) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         if(typeof jsSHA !== "undefined") {
                             var oauthObject = {
                                 oauth_callback: "http://localhost/callback",
@@ -1132,21 +1045,17 @@ angular.module("oauth.providers", ["oauth.utils"])
                                         });
                                     }
                                 });
-                                browserRef.addEventListener('exit', function(event) {
-                                    deferred.reject("The sign in flow was canceled");
-                                });
                             })
                             .error(function(error) {
                                 deferred.reject(error);
                             });
                         } else {
+                            // TODO - change to throw and error
                             deferred.reject("Missing jsSHA JavaScript library");
                         }
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1160,15 +1069,14 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             vkontakte: function(clientId, appScope) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var browserRef = window.open('https://oauth.vk.com/authorize?client_id=' + clientId + '&redirect_uri=http://oauth.vk.com/blank.html&response_type=token&scope=' + appScope.join(",") + '&display=touch&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener('loadstart', function(event) {
                             var tmp = (event.url).split("#");
                             if (tmp[0] == 'https://oauth.vk.com/blank.html' || tmp[0] == 'http://oauth.vk.com/blank.html') {
-                            	browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
@@ -1186,14 +1094,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1208,47 +1111,30 @@ angular.module("oauth.providers", ["oauth.utils"])
             odnoklassniki: function (clientId, appScope)
             {
                 var deferred = $q.defer();
-                if (window.cordova)
-                {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if ($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true)
-                    {
+                try {
+                    initialValidation(deferred, function() {
                         var browserRef = window.open('http://www.odnoklassniki.ru/oauth/authorize?client_id=' + clientId + '&scope=' + appScope.join(",") + '&response_type=token&redirect_uri=http://localhost/callback' + '&layout=m', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
-                        browserRef.addEventListener('loadstart', function (event)
-                        {
-                            if ((event.url).indexOf("http://localhost/callback") === 0)
-                            {
+                        browserRef.addEventListener('loadstart', function (event) {
+                            if ((event.url).indexOf("http://localhost/callback") === 0) {
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
-                                for (var i = 0; i < responseParameters.length; i++)
-                                {
+                                for (var i = 0; i < responseParameters.length; i++) {
                                     parameterMap[responseParameters[i].split("=")[0]] = responseParameters[i].split("=")[1];
                                 }
-                                if (parameterMap.access_token !== undefined && parameterMap.access_token !== null)
-                                {
+                                if (parameterMap.access_token !== undefined && parameterMap.access_token !== null) {
                                     deferred.resolve({ access_token: parameterMap.access_token, session_secret_key: parameterMap.session_secret_key });
-                                } else
-                                {
+                                } else {
                                     deferred.reject("Problem authenticating");
                                 }
-                                setTimeout(function ()
-                                {
+                                setTimeout(function () {
                                     browserRef.close();
                                 }, 10);
                             }
                         });
-                        browserRef.addEventListener('exit', function (event)
-                        {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else
-                    {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else
-                {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1263,9 +1149,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             imgur: function(clientId, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1275,8 +1160,8 @@ angular.module("oauth.providers", ["oauth.utils"])
                         var browserRef = window.open('https://api.imgur.com/oauth2/authorize?client_id=' + clientId + '&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
-                            	browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
@@ -1290,14 +1175,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1311,9 +1191,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             spotify: function(clientId, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1323,8 +1202,8 @@ angular.module("oauth.providers", ["oauth.utils"])
                         var browserRef = window.open('https://accounts.spotify.com/authorize?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&response_type=token&scope=' + appScope.join(" "), '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
-                            	browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
@@ -1338,14 +1217,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1360,9 +1234,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             uber: function(clientId, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1387,14 +1260,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1409,9 +1277,8 @@ angular.module("oauth.providers", ["oauth.utils"])
             */
             windowsLive: function (clientId, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "https://login.live.com/oauth20_desktop.srf";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1436,14 +1303,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function (event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1457,9 +1319,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             yammer: function(clientId, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1469,8 +1330,8 @@ angular.module("oauth.providers", ["oauth.utils"])
                         var browserRef = window.open('https://www.yammer.com/dialog/oauth?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
-                            	browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
@@ -1484,14 +1345,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1506,9 +1362,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             venmo: function(clientId, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1518,8 +1373,8 @@ angular.module("oauth.providers", ["oauth.utils"])
                         var browserRef = window.open('https://api.venmo.com/v1/oauth/authorize?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&response_type=token&scope=' + appScope.join(" "), '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
-                            	browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
@@ -1533,14 +1388,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1556,9 +1406,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             stripe: function(clientId, clientSecret, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1584,14 +1433,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                     });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1607,9 +1451,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             rally: function(clientId, clientSecret, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1635,14 +1478,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                     });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1656,9 +1494,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             familySearch: function(clientId, state, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if(cordovaMetadata.hasOwnProperty("cordova-plugin-inappbrowser") === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1684,14 +1521,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                   });
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1705,9 +1537,8 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             envato: function(clientId, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
+                try {
+                    initialValidation(deferred, function() {
                         var redirect_uri = "http://localhost/callback";
                         if(options !== undefined) {
                             if(options.hasOwnProperty("redirect_uri")) {
@@ -1717,8 +1548,8 @@ angular.module("oauth.providers", ["oauth.utils"])
                         var browserRef = window.open('https://api.envato.com/authorization?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
-                            	browserRef.removeEventListener("exit",function(event){});
-                            	browserRef.close();
+                                browserRef.removeEventListener("exit",function(event){});
+                                browserRef.close();
                                 var callbackResponse = (event.url).split("#")[1];
                                 var responseParameters = (callbackResponse).split("&");
                                 var parameterMap = [];
@@ -1732,14 +1563,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                                 }
                             }
                         });
-                        browserRef.addEventListener('exit', function(event) {
-                            deferred.reject("The sign in flow was canceled");
-                        });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
@@ -1972,9 +1798,7 @@ angular.module("oauth.providers", ["oauth.utils"])
                 }
                 return deferred.promise;
             }
-
         };
-
     }]);
 
 /*
