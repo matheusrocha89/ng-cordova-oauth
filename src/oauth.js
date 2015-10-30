@@ -1,7 +1,7 @@
 angular.module("oauth.providers", ["oauth.utils"])
     .factory("$cordovaOauth", ["$q", '$http', "$cordovaOauthUtility", function($q, $http, $cordovaOauthUtility) {
 
-        function initialValidation(deferred, callback) {
+        function initialValidation(deferred, browserRef, callback) {
             if (window.cordova) {
                 var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
                 if ($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
@@ -29,9 +29,9 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             azureAD: function(clientId, tenantId, resourceURL) {
                 var deferred = $q.defer();
+                var browserRef = window.open('https://login.microsoftonline.com/' + tenantId + '/oauth2/authorize?response_type=code&client_id=' + clientId + '&redirect_uri=http://localhost/callback', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                 try {
-                    initialValidation(deferred, function() {
-                        var browserRef = window.open('https://login.microsoftonline.com/' + tenantId + '/oauth2/authorize?response_type=code&client_id=' + clientId + '&redirect_uri=http://localhost/callback', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener("loadstart", function(event) {
                             if((event.url).indexOf('http://localhost/callback') === 0) {
                                 var requestToken = (event.url).split("code=")[1];
@@ -74,10 +74,9 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             adfs: function(clientId, adfsServer, relyingPartyId) {
                 var deferred = $q.defer();
+                var browserRef = window.open(adfsServer + '/adfs/oauth2/authorize?response_type=code&client_id=' + clientId +'&redirect_uri=http://localhost/callback&resource=' + relyingPartyId, '_blank', 'location=no');
                 try {
-                    initialValidation(deferred, function() {
-                        var browserRef = window.open(adfsServer + '/adfs/oauth2/authorize?response_type=code&client_id=' + clientId +'&redirect_uri=http://localhost/callback&resource=' + relyingPartyId, '_blank', 'location=no');
-
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener("loadstart", function(event) {
                             if((event.url).indexOf('http://localhost/callback') === 0) {
                                 var requestToken = (event.url).split("code=")[1];
@@ -112,15 +111,15 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             dropbox: function(appKey, options) {
                 var deferred = $q.defer();
+                var redirect_uri = "http://localhost/callback";
+                if(options !== undefined) {
+                    if(options.hasOwnProperty("redirect_uri")) {
+                        redirect_uri = options.redirect_uri;
+                    }
+                }
+                var browserRef = window.open("https://www.dropbox.com/1/oauth2/authorize?client_id=" + appKey + "&redirect_uri=" + redirect_uri + "&response_type=token", "_blank", "location=no,clearsessioncache=yes,clearcache=yes");
                 try {
-                    initialValidation(deferred, function() {
-                        var redirect_uri = "http://localhost/callback";
-                        if(options !== undefined) {
-                            if(options.hasOwnProperty("redirect_uri")) {
-                                redirect_uri = options.redirect_uri;
-                            }
-                        }
-                        var browserRef = window.open("https://www.dropbox.com/1/oauth2/authorize?client_id=" + appKey + "&redirect_uri=" + redirect_uri + "&response_type=token", "_blank", "location=no,clearsessioncache=yes,clearcache=yes");
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener("loadstart", function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
                                 browserRef.removeEventListener("exit",function(event){});
@@ -155,15 +154,15 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             digitalOcean: function(clientId, clientSecret, options) {
                 var deferred = $q.defer();
+                var redirect_uri = "http://localhost/callback";
+                if(options !== undefined) {
+                    if(options.hasOwnProperty("redirect_uri")) {
+                        redirect_uri = options.redirect_uri;
+                    }
+                }
+                var browserRef = window.open("https://cloud.digitalocean.com/v1/oauth/authorize?client_id=" + clientId + "&redirect_uri=" + redirect_uri + "&response_type=code&scope=read%20write", "_blank", "location=no,clearsessioncache=yes,clearcache=yes");
                 try {
-                    initialValidation(deferred, function() {
-                        var redirect_uri = "http://localhost/callback";
-                        if(options !== undefined) {
-                            if(options.hasOwnProperty("redirect_uri")) {
-                                redirect_uri = options.redirect_uri;
-                            }
-                        }
-                        var browserRef = window.open("https://cloud.digitalocean.com/v1/oauth/authorize?client_id=" + clientId + "&redirect_uri=" + redirect_uri + "&response_type=code&scope=read%20write", "_blank", "location=no,clearsessioncache=yes,clearcache=yes");
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener("loadstart", function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
                                 var requestToken = (event.url).split("code=")[1];
@@ -199,15 +198,15 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             google: function(clientId, appScope, options) {
                 var deferred = $q.defer();
+                var redirect_uri = "http://localhost/callback";
+                if(options !== undefined) {
+                    if(options.hasOwnProperty("redirect_uri")) {
+                        redirect_uri = options.redirect_uri;
+                    }
+                }
+                var browserRef = window.open('https://accounts.google.com/o/oauth2/auth?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&scope=' + appScope.join(" ") + '&approval_prompt=force&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                 try {
-                    initialValidation(deferred, function() {
-                        var redirect_uri = "http://localhost/callback";
-                        if(options !== undefined) {
-                            if(options.hasOwnProperty("redirect_uri")) {
-                                redirect_uri = options.redirect_uri;
-                            }
-                        }
-                        var browserRef = window.open('https://accounts.google.com/o/oauth2/auth?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&scope=' + appScope.join(" ") + '&approval_prompt=force&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener("loadstart", function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
                                 browserRef.removeEventListener("exit",function(event){});
@@ -243,15 +242,15 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             github: function(clientId, clientSecret, appScope, options) {
                 var deferred = $q.defer();
+                var redirect_uri = "http://localhost/callback";
+                if(options !== undefined) {
+                    if(options.hasOwnProperty("redirect_uri")) {
+                        redirect_uri = options.redirect_uri;
+                    }
+                }
+                var browserRef = window.open('https://github.com/login/oauth/authorize?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&scope=' + appScope.join(","), '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                 try {
-                    initialValidation(deferred, function() {
-                        var redirect_uri = "http://localhost/callback";
-                        if(options !== undefined) {
-                            if(options.hasOwnProperty("redirect_uri")) {
-                                redirect_uri = options.redirect_uri;
-                            }
-                        }
-                        var browserRef = window.open('https://github.com/login/oauth/authorize?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&scope=' + appScope.join(","), '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
                                 requestToken = (event.url).split("code=")[1];
@@ -288,19 +287,19 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             facebook: function(clientId, appScope, options) {
                 var deferred = $q.defer();
+                var redirect_uri = "http://localhost/callback";
+                if(options !== undefined) {
+                    if(options.hasOwnProperty("redirect_uri")) {
+                        redirect_uri = options.redirect_uri;
+                    }
+                }
+                var flowUrl = "https://www.facebook.com/v2.0/dialog/oauth?client_id=" + clientId + "&redirect_uri=" + redirect_uri + "&response_type=token&scope=" + appScope.join(",");
+                if(options !== undefined && options.hasOwnProperty("auth_type")) {
+                    flowUrl += "&auth_type=" + options.auth_type;
+                }
+                var browserRef = window.open(flowUrl, '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                 try {
-                    initialValidation(deferred, function() {
-                        var redirect_uri = "http://localhost/callback";
-                        if(options !== undefined) {
-                            if(options.hasOwnProperty("redirect_uri")) {
-                                redirect_uri = options.redirect_uri;
-                            }
-                        }
-                        var flowUrl = "https://www.facebook.com/v2.0/dialog/oauth?client_id=" + clientId + "&redirect_uri=" + redirect_uri + "&response_type=token&scope=" + appScope.join(",");
-                        if(options !== undefined && options.hasOwnProperty("auth_type")) {
-                            flowUrl += "&auth_type=" + options.auth_type;
-                        }
-                        var browserRef = window.open(flowUrl, '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
                                 browserRef.removeEventListener("exit",function(event){});
@@ -340,16 +339,15 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             linkedin: function(clientId, clientSecret, appScope, state, options) {
                 var deferred = $q.defer();
+                var redirect_uri = "http://localhost/callback";
+                if(options !== undefined) {
+                    if(options.hasOwnProperty("redirect_uri")) {
+                        redirect_uri = options.redirect_uri;
+                    }
+                }
+                var browserRef = window.open('https://www.linkedin.com/uas/oauth2/authorization?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&scope=' + appScope.join(" ") + '&response_type=code&state=' + state, '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                 try {
-                    initialValidation(deferred, function() {
-                        var redirect_uri = "http://localhost/callback";
-                        if(options !== undefined) {
-                            if(options.hasOwnProperty("redirect_uri")) {
-                                redirect_uri = options.redirect_uri;
-                            }
-                        }
-
-                        var browserRef = window.open('https://www.linkedin.com/uas/oauth2/authorization?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&scope=' + appScope.join(" ") + '&response_type=code&state=' + state, '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
                                 requestToken = (event.url).split("code=")[1].split("&")[0];
@@ -385,29 +383,29 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             instagram: function(clientId, appScope, options) {
                 var deferred = $q.defer();
+                var split_tokens = {
+                    'code':'?',
+                    'token':'#'
+                };
+                var redirect_uri = "http://localhost/callback";
+                var response_type = "token";
+                if(options !== undefined) {
+                    if(options.hasOwnProperty("redirect_uri")) {
+                        redirect_uri = options.redirect_uri;
+                    }
+                    if(options.hasOwnProperty("response_type")) {
+                        response_type = options.response_type;
+                    }
+                }
+
+                var scope = '';
+                if (appScope && appScope.length > 0) {
+                    scope = '&scope' + appScope.join('+');
+                }
+
+                var browserRef = window.open('https://api.instagram.com/oauth/authorize/?client_id=' + clientId + '&redirect_uri=' + redirect_uri + scope + '&response_type='+response_type, '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                 try {
-                    initialValidation(deferred, function() {
-                        var split_tokens = {
-                            'code':'?',
-                            'token':'#'
-                        };
-                        var redirect_uri = "http://localhost/callback";
-                        var response_type = "token";
-                        if(options !== undefined) {
-                            if(options.hasOwnProperty("redirect_uri")) {
-                                redirect_uri = options.redirect_uri;
-                            }
-                            if(options.hasOwnProperty("response_type")) {
-                                response_type = options.response_type;
-                            }
-                        }
-
-                        var scope = '';
-                        if (appScope && appScope.length > 0) {
-                            scope = '&scope' + appScope.join('+');
-                        }
-
-                        var browserRef = window.open('https://api.instagram.com/oauth/authorize/?client_id=' + clientId + '&redirect_uri=' + redirect_uri + scope + '&response_type='+response_type, '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
                                 browserRef.removeEventListener("exit",function(event){});
@@ -441,15 +439,15 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             box: function(clientId, clientSecret, appState, options) {
                 var deferred = $q.defer();
+                var redirect_uri = "http://localhost/callback";
+                if(options !== undefined) {
+                    if(options.hasOwnProperty("redirect_uri")) {
+                        redirect_uri = options.redirect_uri;
+                    }
+                }
+                var browserRef = window.open('https://app.box.com/api/oauth2/authorize/?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&state=' + appState + '&response_type=code', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                 try {
-                    initialValidation(deferred, function() {
-                        var redirect_uri = "http://localhost/callback";
-                        if(options !== undefined) {
-                            if(options.hasOwnProperty("redirect_uri")) {
-                                redirect_uri = options.redirect_uri;
-                            }
-                        }
-                        var browserRef = window.open('https://app.box.com/api/oauth2/authorize/?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&state=' + appState + '&response_type=code', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
                                 requestToken = (event.url).split("code=")[1];
@@ -486,15 +484,15 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             reddit: function(clientId, clientSecret, appScope, compact, options) {
                 var deferred = $q.defer();
+                var redirect_uri = "http://localhost/callback";
+                if(options !== undefined) {
+                    if(options.hasOwnProperty("redirect_uri")) {
+                        redirect_uri = options.redirect_uri;
+                    }
+                }
+                var browserRef = window.open('https://ssl.reddit.com/api/v1/authorize' + (compact ? '.compact' : '') + '?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&duration=permanent&state=ngcordovaoauth&scope=' + appScope.join(",") + '&response_type=code', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                 try {
-                    initialValidation(deferred, function() {
-                        var redirect_uri = "http://localhost/callback";
-                        if(options !== undefined) {
-                            if(options.hasOwnProperty("redirect_uri")) {
-                                redirect_uri = options.redirect_uri;
-                            }
-                        }
-                        var browserRef = window.open('https://ssl.reddit.com/api/v1/authorize' + (compact ? '.compact' : '') + '?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&duration=permanent&state=ngcordovaoauth&scope=' + appScope.join(",") + '&response_type=code', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
                                 requestToken = (event.url).split("code=")[1];
@@ -532,17 +530,16 @@ angular.module("oauth.providers", ["oauth.utils"])
              */
             slack: function(clientId, clientSecret, appScope, options) {
                 var deferred = $q.defer();
-                if(window.cordova) {
-                    var cordovaMetadata = cordova.require("cordova/plugin_list").metadata;
-                    if($cordovaOauthUtility.isInAppBrowserInstalled(cordovaMetadata) === true) {
-                        var redirect_uri = "http://localhost/callback";
-                        if(options !== undefined) {
-                            if(options.hasOwnProperty("redirect_uri")) {
-                                redirect_uri = options.redirect_uri;
-                            }
-                        }
+                var redirect_uri = "http://localhost/callback";
+                if(options !== undefined) {
+                    if(options.hasOwnProperty("redirect_uri")) {
+                        redirect_uri = options.redirect_uri;
+                    }
+                }
 
-                        var browserRef = window.open('https://slack.com/oauth/authorize' + '?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&state=ngcordovaoauth&scope=' + appScope.join(","), '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                var browserRef = window.open('https://slack.com/oauth/authorize' + '?client_id=' + clientId + '&redirect_uri=' + redirect_uri + '&state=ngcordovaoauth&scope=' + appScope.join(","), '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                try {
+                    initialValidation(deferred, browserRef, function() {
                         browserRef.addEventListener('loadstart', function(event) {
                             if((event.url).indexOf(redirect_uri) === 0) {
                                 requestToken = (event.url).split("code=")[1];
@@ -565,11 +562,9 @@ angular.module("oauth.providers", ["oauth.utils"])
                         browserRef.addEventListener('exit', function(event) {
                             deferred.reject("The sign in flow was canceled");
                         });
-                    } else {
-                        deferred.reject("Could not find InAppBrowser plugin");
-                    }
-                } else {
-                    deferred.reject("Cannot authenticate via a web browser");
+                    });
+                } catch (errorMessage) {
+                    deferred.reject(errorMessage);
                 }
                 return deferred.promise;
             },
